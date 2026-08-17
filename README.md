@@ -4,7 +4,7 @@ A data mining project analyzing product defect data (`defects_data.csv`), combin
 
 ## Contents
 
-- **`DataMining.ipynb`** — Full analysis notebook: preprocessing, OLAP roll-up/drill-down/pivot, PCA, Decision Tree / KNN / Linear Regression, KMeans clustering, and Apriori/FP-Growth frequent pattern mining.
+- **`Data Mining Regression.ipynb`** — Full analysis notebook: preprocessing, OLAP roll-up/drill-down/pivot, PCA, Decision Tree / KNN / Linear Regression, KMeans clustering, and Apriori/FP-Growth frequent pattern mining.
 - **`GUI.py`** — Tkinter dashboard that mirrors the notebook's results across 5 tabs: Model Performance, PCA, KNN Analysis, KMeans Clustering, and OLAP.
 - **`defects_data.csv`** — Dataset of product defects (type, severity, location, inspection method, repair cost).
 
