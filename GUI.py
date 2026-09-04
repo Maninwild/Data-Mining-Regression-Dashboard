@@ -1,227 +1,165 @@
+"""Tkinter interface for the reusable data-mining analysis pipeline."""
 
-# COMPLETE DATA MINING DASHBOARD GUI
-
+from __future__ import annotations
 
 import tkinter as tk
-from tkinter import ttk
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+from tkinter import messagebox, ttk
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.neighbors import KNeighborsRegressor
-from sklearn.cluster import KMeans
-from sklearn.metrics import r2_score
-
-
-df = pd.read_csv("defects_data.csv")
-df = df.dropna()
-
-X = df.drop("repair_cost", axis=1)
-y = df["repair_cost"]
-
-X = pd.get_dummies(X, drop_first=True)
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
-
-# --- Regression models: fit on RAW (unscaled) features, matching the notebook ---
-
-# Linear Regression
-lr = LinearRegression()
-lr.fit(X_train, y_train)
-lr_pred = lr.predict(X_test)
-lr_r2 = r2_score(y_test, lr_pred)
-
-# Decision Tree
-dt = DecisionTreeRegressor(random_state=42)
-dt.fit(X_train, y_train)
-dt_pred = dt.predict(X_test)
-dt_r2 = r2_score(y_test, dt_pred)
-
-# KNN
-knn = KNeighborsRegressor(n_neighbors=5)
-knn.fit(X_train, y_train)
-knn_pred = knn.predict(X_test)
-knn_r2 = r2_score(y_test, knn_pred)
-
-# --- PCA / KMeans: fit on the FULL scaled dataset (all rows), matching the notebook ---
-# (the notebook scales/fits PCA and KMeans on X, not just X_train)
-
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
-pca = PCA(n_components=2)
-X_pca = pca.fit_transform(X_scaled)
-
-kmeans = KMeans(n_clusters=3, random_state=42)
-clusters = kmeans.fit_predict(X_scaled)
-
-#GUI
-
-root = tk.Tk()
-root.title("Complete Data Mining Dashboard")
-root.geometry("1200x800")
-root.configure(bg="#f0f0f0")
-
-title = tk.Label(root,
-                 text="DATA MINING REGRESSION DASHBOARD",
-                 font=("Arial", 20, "bold"),
-                 bg="#003366",
-                 fg="white")
-title.pack(fill=tk.X)
-
-
-notebook = ttk.Notebook(root)
-notebook.pack(fill=tk.BOTH, expand=True)
-
-
-
-# TAB 1 - MODEL PERFORMANCE
-
-
-tab1 = tk.Frame(notebook, bg="white")
-notebook.add(tab1, text="Model Performance")
-
-tk.Label(tab1, text="R2 Scores",
-         font=("Arial", 16, "bold"),
-         bg="white").pack(pady=10)
-
-tk.Label(tab1, text=f"Linear Regression R2: {round(lr_r2,4)}",
-         bg="white").pack()
-
-tk.Label(tab1, text=f"Decision Tree R2: {round(dt_r2,4)}",
-         bg="white").pack()
-
-tk.Label(tab1, text=f"KNN R2: {round(knn_r2,4)}",
-         bg="white").pack()
-
-fig1 = plt.Figure(figsize=(5,4))
-ax1 = fig1.add_subplot(111)
-models = ["LR", "DT", "KNN"]
-scores = [lr_r2, dt_r2, knn_r2]
-ax1.bar(models, scores)
-ax1.set_title("Model Comparison (R2)")
-
-canvas1 = FigureCanvasTkAgg(fig1, tab1)
-canvas1.draw()
-canvas1.get_tk_widget().pack()
-
-
-tk.Label(tab1,
-         text="Inference:\nHigher R2 indicates better prediction performance.\n"
-              "Decision Tree captures non-linear patterns.\n"
-              "Linear Regression models linear relationships.",
-         bg="white").pack(pady=20)
-
-
-
-# TAB 2 - PCA
-
-
-tab2 = tk.Frame(notebook, bg="white")
-notebook.add(tab2, text="PCA")
-
-fig2 = plt.Figure(figsize=(5,4))
-ax2 = fig2.add_subplot(111)
-ax2.scatter(X_pca[:,0], X_pca[:,1])
-ax2.set_title("PCA - 2D Projection")
-
-canvas2 = FigureCanvasTkAgg(fig2, tab2)
-canvas2.draw()
-canvas2.get_tk_widget().pack()
-
-tk.Label(tab2,
-         text="Inference:\nPCA reduces dimensionality while preserving variance.\n"
-              "Helps visualize high-dimensional defect data.",
-         bg="white").pack(pady=20)
-
-
-
-# TAB 3 - KNN GRAPH
-
-
-tab3 = tk.Frame(notebook, bg="white")
-notebook.add(tab3, text="KNN Analysis")
-
-k_vals = range(1, 15)
-r2_vals = []
-
-for k in k_vals:
-    model = KNeighborsRegressor(n_neighbors=k)
-    model.fit(X_train, y_train)
-    pred = model.predict(X_test)
-    r2_vals.append(r2_score(y_test, pred))
-
-fig3 = plt.Figure(figsize=(5,4))
-ax3 = fig3.add_subplot(111)
-ax3.plot(k_vals, r2_vals)
-ax3.set_title("KNN - K vs R2")
-ax3.set_xlabel("K")
-ax3.set_ylabel("R2")
-
-canvas3 = FigureCanvasTkAgg(fig3, tab3)
-canvas3.draw()
-canvas3.get_tk_widget().pack()
-
-tk.Label(tab3,
-         text="Inference:\nOptimal K is where R2 is highest.\n"
-              "Too small K → overfitting.\n"
-              "Too large K → underfitting.",
-         bg="white").pack(pady=20)
-
-
-
-# TAB 4 - KMEANS
-
-
-tab4 = tk.Frame(notebook, bg="white")
-notebook.add(tab4, text="KMeans Clustering")
-
-fig4 = plt.Figure(figsize=(5,4))
-ax4 = fig4.add_subplot(111)
-ax4.scatter(X_pca[:,0], X_pca[:,1], c=clusters)
-ax4.set_title("KMeans Clusters (PCA Projection)")
-
-canvas4 = FigureCanvasTkAgg(fig4, tab4)
-canvas4.draw()
-canvas4.get_tk_widget().pack()
-
-tk.Label(tab4,
-         text="Inference:\nKMeans groups defects into clusters\n"
-              "based on similarity in feature space.",
-         bg="white").pack(pady=20)
-
-
-
-# TAB 5 - OLAP
-
-
-tab5 = tk.Frame(notebook, bg="white")
-notebook.add(tab5, text="OLAP")
-
-olap_data = df.groupby("severity")["repair_cost"].mean()
-
-fig5 = plt.Figure(figsize=(5,4))
-ax5 = fig5.add_subplot(111)
-ax5.bar(olap_data.index, olap_data.values)
-ax5.set_title("Average Repair Cost by Severity")
-
-canvas5 = FigureCanvasTkAgg(fig5, tab5)
-canvas5.draw()
-canvas5.get_tk_widget().pack()
-
-tk.Label(tab5,
-         text="Inference:\nOLAP aggregates data for business insights.\n"
-              "Helps analyze cost patterns across severity levels.",
-         bg="white").pack(pady=20)
-
-
-root.mainloop()
+from matplotlib.figure import Figure
+
+from analysis import run_analysis
+
+
+def add_figure(parent: tk.Widget, figure: Figure) -> None:
+    canvas = FigureCanvasTkAgg(figure, parent)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=16, pady=12)
+
+
+def add_note(parent: tk.Widget, text: str) -> None:
+    tk.Label(
+        parent,
+        text=text,
+        bg="white",
+        fg="#334155",
+        justify=tk.LEFT,
+        wraplength=960,
+        font=("Arial", 10),
+    ).pack(fill=tk.X, padx=20, pady=(0, 16))
+
+
+class Dashboard:
+    def __init__(self, root: tk.Tk, results: dict[str, object]) -> None:
+        self.root = root
+        self.results = results
+        self.root.title("Data Mining and Regression Dashboard")
+        self.root.geometry("1200x800")
+        self.root.minsize(900, 650)
+        self.root.configure(bg="#f1f5f9")
+
+        tk.Label(
+            root,
+            text="DATA MINING & REGRESSION DASHBOARD",
+            font=("Arial", 20, "bold"),
+            bg="#0f3d63",
+            fg="white",
+            pady=16,
+        ).pack(fill=tk.X)
+
+        notebook = ttk.Notebook(root)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
+        self._model_tab(notebook)
+        self._pca_tab(notebook)
+        self._knn_tab(notebook)
+        self._cluster_tab(notebook)
+        self._olap_tab(notebook)
+
+    @staticmethod
+    def _tab(notebook: ttk.Notebook, title: str) -> tk.Frame:
+        frame = tk.Frame(notebook, bg="white")
+        notebook.add(frame, text=title)
+        return frame
+
+    def _model_tab(self, notebook: ttk.Notebook) -> None:
+        tab = self._tab(notebook, "Model Performance")
+        metrics = self.results["metrics"]
+        figure = Figure(figsize=(8, 4.5), tight_layout=True)
+        axis = figure.add_subplot(111)
+        colors = ["#94a3b8", "#2563eb", "#0f766e", "#7c3aed"]
+        axis.bar(metrics["model"], metrics["r2"], color=colors)
+        axis.axhline(0, color="#0f172a", linewidth=0.8)
+        axis.set_ylabel("Held-out R²")
+        axis.set_title("Regression models compared with a mean baseline")
+        axis.tick_params(axis="x", rotation=12)
+        add_figure(tab, figure)
+
+        rows = [
+            f"{row.model}: R² {row.r2:.3f} · MAE ₹{row.mae:.2f} · RMSE ₹{row.rmse:.2f}"
+            for row in metrics.itertuples()
+        ]
+        best = metrics.loc[metrics["r2"].idxmax()]
+        add_note(
+            tab,
+            "\n".join(rows)
+            + f"\n\nBest held-out R²: {best['model']} ({best['r2']:.3f}). "
+            "A value near or below zero means the available features do not predict repair cost better than the mean baseline.",
+        )
+
+    def _pca_tab(self, notebook: ttk.Notebook) -> None:
+        tab = self._tab(notebook, "PCA")
+        projection = self.results["projection"]
+        explained = self.results["explained_variance"]
+        figure = Figure(figsize=(7, 5), tight_layout=True)
+        axis = figure.add_subplot(111)
+        axis.scatter(projection[:, 0], projection[:, 1], s=18, alpha=0.65, color="#2563eb")
+        axis.set_xlabel("Principal component 1")
+        axis.set_ylabel("Principal component 2")
+        axis.set_title("Two-dimensional PCA projection")
+        add_figure(tab, figure)
+        add_note(
+            tab,
+            f"The first two components explain {(sum(explained) * 100):.1f}% of encoded-feature variance. "
+            "This plot is exploratory and is not evidence of predictive accuracy.",
+        )
+
+    def _knn_tab(self, notebook: ttk.Notebook) -> None:
+        tab = self._tab(notebook, "KNN Selection")
+        curve = self.results["knn_curve"]
+        best_k = self.results["best_k"]
+        figure = Figure(figsize=(7, 5), tight_layout=True)
+        axis = figure.add_subplot(111)
+        axis.plot(curve["k"], curve["mean_cv_r2"], marker="o", color="#7c3aed")
+        axis.axvline(best_k, color="#ef4444", linestyle="--", label=f"Selected k={best_k}")
+        axis.set_xlabel("Neighbours (k)")
+        axis.set_ylabel("Mean 5-fold CV R²")
+        axis.set_title("KNN hyperparameter selection on training data")
+        axis.legend()
+        add_figure(tab, figure)
+        add_note(tab, "Scaling and cross-validation are applied before KNN is evaluated on the held-out test set.")
+
+    def _cluster_tab(self, notebook: ttk.Notebook) -> None:
+        tab = self._tab(notebook, "KMeans Clustering")
+        projection = self.results["projection"]
+        clusters = self.results["clusters"]
+        figure = Figure(figsize=(7, 5), tight_layout=True)
+        axis = figure.add_subplot(111)
+        axis.scatter(projection[:, 0], projection[:, 1], c=clusters, s=18, alpha=0.7, cmap="viridis")
+        axis.set_xlabel("Principal component 1")
+        axis.set_ylabel("Principal component 2")
+        axis.set_title("Three KMeans clusters shown in PCA space")
+        add_figure(tab, figure)
+        add_note(tab, "KMeans operates on the full standardized feature matrix; PCA is used only to display the clusters.")
+
+    def _olap_tab(self, notebook: ttk.Notebook) -> None:
+        tab = self._tab(notebook, "OLAP Summary")
+        summary = self.results["olap"]
+        figure = Figure(figsize=(7, 5), tight_layout=True)
+        axis = figure.add_subplot(111)
+        axis.bar(summary.index, summary["average_cost"], color="#0f766e")
+        axis.set_ylabel("Average repair cost (₹)")
+        axis.set_title("Average repair cost by severity")
+        add_figure(tab, figure)
+        lines = [
+            f"{severity}: {int(row.defects)} defects · average ₹{row.average_cost:.2f} · total ₹{row.total_cost:.2f}"
+            for severity, row in summary.iterrows()
+        ]
+        add_note(tab, "\n".join(lines))
+
+
+def main() -> None:
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        results = run_analysis()
+    except Exception as error:  # GUI boundary: show a readable startup failure.
+        messagebox.showerror("Dashboard startup failed", str(error), parent=root)
+        root.destroy()
+        return
+    root.deiconify()
+    Dashboard(root, results)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()

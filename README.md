@@ -1,26 +1,91 @@
-# Data Mining Regression Dashboard 
+# Data Mining Regression Dashboard
 
-A data mining project analyzing product defect data (`defects_data.csv`), combining OLAP-style aggregation, dimensionality reduction, regression, clustering, and frequent pattern mining — with results presented in both a Jupyter notebook and an interactive Tkinter GUI.
+A reproducible analysis of 1,000 product-defect records. The project combines regression benchmarking, OLAP-style summaries, PCA, KMeans clustering, and frequent-itemset mining in a shared Python module used by both a notebook and a Tkinter dashboard.
 
-## Contents
+## What was improved
 
-- **`Data Mining Regression.ipynb`** — Full analysis notebook: preprocessing, OLAP roll-up/drill-down/pivot, PCA, Decision Tree / KNN / Linear Regression, KMeans clustering, and Apriori/FP-Growth frequent pattern mining.
-- **`GUI.py`** — Tkinter dashboard that mirrors the notebook's results across 5 tabs: Model Performance, PCA, KNN Analysis, KMeans Clustering, and OLAP.
-- **`defects_data.csv`** — Dataset of product defects (type, severity, location, inspection method, repair cost).
+- Loads `defects_data.csv` relative to the project instead of relying on the current working directory or Google Colab paths.
+- Keeps `defect_id` out of the model and converts the raw date into month and weekday features.
+- Compares every regressor with a mean baseline on the same held-out test split.
+- Scales KNN inputs and selects `k` with five-fold cross-validation on training data only.
+- Uses constrained tree settings to reduce overfitting.
+- Runs PCA and KMeans on standardized features.
+- Provides dependency-free Apriori frequent-itemset mining for this small dataset.
+- Shares one analysis implementation across the notebook, GUI, and automated tests.
 
+## Setup
 
+Python 3.10 or newer is recommended.
+
+```bash
+python -m venv .venv
 ```
 
-> Requires a display (won't run headless over plain SSH without X forwarding).
+Activate the environment:
 
-## Key Finding
+```bash
+# Linux/macOS
+source .venv/bin/activate
 
-Regression models were evaluated on `repair_cost` using defect attributes (`defect_type`, `severity`, `defect_location`, `inspection_method`, `product_id`):
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+```
 
-| Model | R² |
+Install the dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+## Run the project
+
+Launch the desktop dashboard:
+
+```bash
+python GUI.py
+```
+
+Tkinter needs a graphical desktop. On some Linux systems, the OS package for Tkinter must be installed separately.
+
+Or open the analysis notebook:
+
+```bash
+jupyter notebook "Data Mining Regression Dashboard.ipynb"
+```
+
+Jupyter itself is optional and is not included in `requirements.txt` because the GUI and test suite do not need it.
+
+## Reproduced model results
+
+The checked-in pipeline uses a deterministic 80/20 split (`random_state=42`). Current held-out results are:
+
+| Model | R² | MAE | RMSE |
+|---|---:|---:|---:|
+| Mean baseline | -0.003 | ₹254.62 | ₹293.22 |
+| Linear regression | -0.164 | ₹267.49 | ₹315.81 |
+| Decision tree | -0.042 | ₹257.90 | ₹298.78 |
+| Scaled KNN (`k=13`) | -0.098 | ₹263.94 | ₹306.68 |
+
+Negative held-out R² is an analytical result, not a display error: these recorded attributes do not predict repair cost better than the training-set mean. The severity groups tell a similar story, with average repair costs ranging only from about ₹501.63 to ₹514.43. Richer cost drivers would be needed for a useful predictive model.
+
+## Project structure
+
+| Path | Purpose |
 |---|---|
-| Linear Regression | ≈ -0.21 |
-| Decision Tree | ≈ -0.88 |
-| KNN | negative across all tested K |
+| `analysis.py` | Validated loading, features, models, PCA, clustering, OLAP, and itemsets |
+| `GUI.py` | Five-tab Tkinter dashboard |
+| `Data Mining Regression Dashboard.ipynb` | Reproducible exploratory workflow |
+| `defects_data.csv` | Source dataset |
+| `test_analysis.py` | Pipeline regression tests |
+| `.github/workflows/ci.yml` | Automated validation on pushes and pull requests |
 
-All models perform worse than simply predicting the mean, indicating `repair_cost` is not well explained by these features in this dataset. OLAP aggregation supports this: average repair cost is nearly flat (~₹500–515) across every severity level and defect type.
+## Validate
+
+```bash
+python -m compileall -q analysis.py GUI.py test_analysis.py
+python -m unittest -v
+```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
